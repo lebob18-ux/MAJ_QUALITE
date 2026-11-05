@@ -1,0 +1,14 @@
+{
+  "name": "MAJ_PCLE-MMM",
+  "short_name": "MAJ PCLE",
+  "description": "Mise à jour FKT, PA et FA",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b2545",
+  "theme_color": "#0b2545",
+  "lang": "fr",
+  "icons": [
+    {"src": "icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}

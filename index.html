@@ -158,9 +158,9 @@ function drawList(){
   const types = cat === 'FKT' ? [...new Set(A.map(x => x.fkt_type).filter(Boolean))].sort((a, b) => (FKT_ORD.indexOf(a) + 1 || 99) - (FKT_ORD.indexOf(b) + 1 || 99)) : [];
   if(!types.includes(ft)) ft = '';
   const L = cat === 'FKT' && ft ? A.filter(x => x.fkt_type === ft) : A;
-  const n = L.length, e = L.filter(x => x.fkt_edit).length, c = L.filter(x => x.fkt_amorti).length;
+  const n = L.length, e = L.filter(x => x.fkt_edit && !x.fkt_amorti).length, c = L.filter(x => x.fkt_amorti).length, w = L.filter(x => x.fkt_amorti && !x.fkt_edit).length;
   if($('#sub')) $('#sub').innerHTML = types.length ? `<div class="seg" style="flex-wrap:wrap"><button type="button" style="flex:1 1 auto" data-ft="" aria-pressed="${ft === ''}">Tous</button>${types.map(t => `<button type="button" style="flex:1 1 auto" data-ft="${esc(t)}" aria-pressed="${ft === t}">${esc(ftLabel(t))}</button>`).join('')}</div>` : '';
-  const q = nz(flt), S = L.filter(x => !q || nz([x.support, x.numero, x.libelle, x.fkt_type].join(' ')).includes(q));
+  const q = nz(flt), M = L.filter(x => !q || nz([x.support, x.numero, x.libelle, x.fkt_type].join(' ')).includes(q)), S = hd ? M.filter(x => !(x.fkt_edit && x.fkt_amorti)) : M, nh = M.length - S.length;
   $('#sum').innerHTML = `<div class="card"><div class="rl"><b>${cat}${ft ? ' ' + esc(ftLabel(ft)) : ''} · ${esc(D.names[cur] || '')}</b><b>${c} / ${n} · ${n ? Math.round(c / n * 100) : 0} %</b></div>
     <div class="bar"><i style="width:${n ? (c - w) / n * 100 : 0}%;background:var(--ok)"></i><i style="width:${n ? w / n * 100 : 0}%;background:var(--dep)"></i><i style="width:${n ? e / n * 100 : 0}%;background:var(--ec)"></i></div>
     <div class="mu"><span style="color:var(--ok)">■</span> ${lb[1]} (${c - w}) · <span style="color:var(--ec)">■</span> ${lb[0]} (${e}) · à faire (${n - e - c})${w ? ` · <b style="color:var(--dep)">■ incohérentes (${w})</b>` : ''}</div>

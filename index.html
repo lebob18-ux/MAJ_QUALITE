@@ -116,11 +116,12 @@ function req(ck){
   D.sx.filter(r => key(r.Chantier) === ck).forEach(r => {
     const t = nz(r.Tache), ty = key(r.type);
     if(ty === 'GC' && t.includes('fouille')) o.push({origine:'FOUILLE', support:r.Support, libelle:null});
-    if(ty === 'RELEVER CAT' && t.includes('appareil tendeur')) o.push({origine:'FKT_AT', support:r.Support, libelle:'PA ' + r.Tache});
+      });
+  D.q.filter(x => (x.categorie || 'FKT') === 'FKT' && key(x.chantier) === ck && key(x.fkt_type) === 'FKT_AT').forEach(x => o.push({origine:'FKT_AT', support:x.support, libelle:'PA FKT_AT'})); o.push({origine:'FKT_AT', support:r.Support, libelle:'PA ' + r.Tache});
   });
   const ex = rows('PA', ck).filter(x => x.origine);
   return o.filter((x, i) => o.findIndex(y => y.origine === x.origine && key(y.support) === key(x.support) && y.libelle === x.libelle) === i)
-    .filter(x => !ex.some(e => e.origine === x.origine && key(e.support) === key(x.support) && (x.origine === 'FOUILLE' || (e.libelle || '') === x.libelle)));
+    .filter(x => !ex.some(e => e.origine === x.origine && key(e.support) === key(x.support)));
 }
 
 function row(x){

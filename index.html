@@ -46,6 +46,7 @@ select,input[type=text],input[type=search]{width:100%}
 <div id="v"></div>
 </main>
 <script>
+window.addEventListener('error', e => alert('Erreur JS : ' + e.message + ' (ligne ' + e.lineno + ')'));
 const U = "https://thbqkeugjvsxbryfnzuo.supabase.co";
 const K = "sb_publishable_2-Ij-nrTPeK6rB-kSD-QTg_b42zNakq";
 const $ = s => document.querySelector(s);
@@ -156,7 +157,7 @@ function drawList(){
   if(!types.includes(ft)) ft = '';
   const L = cat === 'FKT' && ft ? A.filter(x => x.fkt_type === ft) : A;
   const n = L.length, e = L.filter(x => x.fkt_edit).length, c = L.filter(x => x.fkt_amorti).length;
-  $('#sub').innerHTML = types.length ? `<div class="seg" style="flex-wrap:wrap"><button type="button" style="flex:1 1 auto" data-ft="" aria-pressed="${ft === ''}">Tous</button>${types.map(t => `<button type="button" style="flex:1 1 auto" data-ft="${esc(t)}" aria-pressed="${ft === t}">${esc(ftLabel(t))}</button>`).join('')}</div>` : '';
+  if($('#sub')) $('#sub').innerHTML = types.length ? `<div class="seg" style="flex-wrap:wrap"><button type="button" style="flex:1 1 auto" data-ft="" aria-pressed="${ft === ''}">Tous</button>${types.map(t => `<button type="button" style="flex:1 1 auto" data-ft="${esc(t)}" aria-pressed="${ft === t}">${esc(ftLabel(t))}</button>`).join('')}</div>` : '';
   const q = nz(flt), S = L.filter(x => !q || nz([x.support, x.numero, x.libelle, x.fkt_type].join(' ')).includes(q));
   $('#sum').innerHTML = `<div class="card"><div class="rl"><b>${cat}${ft ? ' ' + esc(ftLabel(ft)) : ''} · ${esc(D.names[cur] || '')}</b><b>${c} / ${n} · ${n ? Math.round(c / n * 100) : 0} %</b></div>
     <div class="bar"><i style="width:${n ? c / n * 100 : 0}%;background:var(--ok)"></i><i style="width:${n ? (e - c) / n * 100 : 0}%;background:var(--ec)"></i></div>
@@ -198,6 +199,7 @@ $('#v').addEventListener('change', e => {
 $('#v').addEventListener('input', e => { if(e.target.id === 'q'){ flt = e.target.value; drawList(); } });
 $('#v').addEventListener('click', async e => {
   const t = e.target.closest('button'); if(!t || !ADM) return;
+  if(t.dataset.c){ cat = t.dataset.c; draw(); return; }
   if(t.dataset.ft !== undefined){ ft = t.dataset.ft; drawList(); return; }
   try{
     if('gen' in t.dataset){ await post(req(cur).map(o => ({chantier:D.names[cur], categorie:'PA', numero:null, ...o}))); }

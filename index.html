@@ -60,6 +60,7 @@ const jour = () => { const d = new Date(); if(d.getHours() < 6) d.setDate(d.getD
 let ADM = null, D = {sx:[], bl:[], q:[], names:{}}, cur = localStorage.getItem('maj_ch') || '', cat = 'FKT', flt = '', ft = '';
 const FKT_ORD = ['FKT_AT', 'FKT_ARMEMENT', 'FKT_FBM', 'FKT_DEROULAGE'];
 const ftLabel = t => String(t).replace(/^FKT_/, '').replace(/_/g, ' ');
+let hd = localStorage.getItem('maj_hd') !== '0';
 
 async function all(t, c){
   let out = [], from = 0;
@@ -132,11 +133,11 @@ function req(ck){
 }
 
 function row(x){
-  const c = x.categorie || 'FKT', l = LB[c];
+  const c = x.categorie || 'FKT', l = LB[c], inc = !!x.fkt_amorti && !x.fkt_edit;
   const ln = (f, t) => `<label class="tg" style="margin-top:6px"><input type="checkbox" data-f="${f}" data-id="${x.id}"${x[f] ? ' checked' : ''}> ${t}</label>`;
   const titre = c === 'FKT' ? `Support ${esc(x.support)}` : (x.numero ? esc(x.numero) : `<input type="text" data-n="${x.id}" placeholder="N° ${c}" style="width:110px;min-height:36px">`) + (x.support ? ' · Support ' + esc(x.support) : '');
   const sub = c === 'FKT' ? esc(x.fkt_type) : (x.origine === 'FOUILLE' ? '<span class="tag">Fouille</span>' : x.origine === 'FKT_AT' ? '<span class="tag">FKT appareil tendeur</span>' : '') + (x.origine === 'FOUILLE' ? '' : esc(x.libelle || ''));
-  return `<div class="card"><div class="rl"><b>${titre}</b>${c === 'FKT' ? '' : `<button type="button" class="del" data-del="${x.id}">🗑</button>`}</div>${sub ? `<div class="mu">${sub}</div>` : ''}${ln('fkt_edit', l[0])}${ln('fkt_amorti', l[1])}</div>`;
+  return `<div class="card"${inc ? ' style="border-color:var(--dep);background:rgba(196,84,59,.12)"' : ''}><div class="rl"><b>${titre}</b>${c === 'FKT' ? '' : `<button type="button" class="del" data-del="${x.id}">🗑</button>`}</div>${sub ? `<div class="mu">${sub}</div>` : ''}${ln('fkt_edit', l[0])}${ln('fkt_amorti', l[1])}${inc ? `<div style="margin-top:6px;font-weight:700;color:var(--dep)">⚠️ « ${l[1]} » cochée sans « ${l[0]} »</div>` : ''}</div>`;
 }
 
 function draw(){
@@ -147,6 +148,7 @@ function draw(){
     <div class="seg">${['FKT', 'PA', 'FA'].map(c => `<button type="button" data-c="${c}" aria-pressed="${c === cat}">${c}</button>`).join('')}</div>
     <div id="sub"></div>
     <input type="search" id="q" placeholder="Filtrer (support, N°, libellé)" value="${esc(flt)}" style="margin-bottom:10px">
+    <label class="tg" style="margin:0 0 10px"><input type="checkbox" id="hd"${hd ? ' checked' : ''}> Masquer les lignes terminées (2 cases cochées)</label>
     <div id="sum"></div><div id="lst"></div>
     ${cat === 'FKT' ? '' : `<div class="card"><h2>Créer une ${cat}</h2><div class="frm"><input type="text" id="fn" placeholder="N° (ex. 12)"><input type="text" id="fs" placeholder="Support (facultatif)"><input type="text" id="fl" placeholder="Libellé (facultatif)"><button type="button" class="btn" data-add>➕ Créer la ${cat}</button></div></div>`}`;
   drawList();
@@ -160,10 +162,10 @@ function drawList(){
   if($('#sub')) $('#sub').innerHTML = types.length ? `<div class="seg" style="flex-wrap:wrap"><button type="button" style="flex:1 1 auto" data-ft="" aria-pressed="${ft === ''}">Tous</button>${types.map(t => `<button type="button" style="flex:1 1 auto" data-ft="${esc(t)}" aria-pressed="${ft === t}">${esc(ftLabel(t))}</button>`).join('')}</div>` : '';
   const q = nz(flt), S = L.filter(x => !q || nz([x.support, x.numero, x.libelle, x.fkt_type].join(' ')).includes(q));
   $('#sum').innerHTML = `<div class="card"><div class="rl"><b>${cat}${ft ? ' ' + esc(ftLabel(ft)) : ''} · ${esc(D.names[cur] || '')}</b><b>${c} / ${n} · ${n ? Math.round(c / n * 100) : 0} %</b></div>
-    <div class="bar"><i style="width:${n ? c / n * 100 : 0}%;background:var(--ok)"></i><i style="width:${n ? (e - c) / n * 100 : 0}%;background:var(--ec)"></i></div>
-    <div class="mu"><span style="color:var(--ok)">■</span> ${lb[1]} (${c}) · <span style="color:var(--ec)">■</span> ${lb[0]} (${e - c}) · à faire (${n - e})</div>
+    <div class="bar"><i style="width:${n ? (c - w) / n * 100 : 0}%;background:var(--ok)"></i><i style="width:${n ? w / n * 100 : 0}%;background:var(--dep)"></i><i style="width:${n ? e / n * 100 : 0}%;background:var(--ec)"></i></div>
+    <div class="mu"><span style="color:var(--ok)">■</span> ${lb[1]} (${c - w}) · <span style="color:var(--ec)">■</span> ${lb[0]} (${e}) · à faire (${n - e - c})${w ? ` · <b style="color:var(--dep)">■ incohérentes (${w})</b>` : ''}</div>
     ${R.length ? `<button type="button" class="btn" data-gen style="margin-top:10px">⚠️ Créer les ${R.length} PA obligatoires manquantes</button><div class="mu">Fouilles et FKT appareil tendeur sans PA.</div>` : ''}</div>`;
-  $('#lst').innerHTML = S.map(row).join('') || '<div class="card mu">Aucune ligne.</div>';
+  $('#lst').innerHTML = (S.map(row).join('') || '<div class="card mu">Aucune ligne à afficher.</div>') + (nh ? `<div class="mu" style="text-align:center">${nh} ligne(s) terminée(s) masquée(s)</div>` : '');
 }
 
 async function patch(id, p){
@@ -186,12 +188,11 @@ async function post(body){
 $('#v').addEventListener('change', e => {
   const el = e.target;
   if(el.id === 'ch'){ cur = el.value; localStorage.setItem('maj_ch', cur); drawList(); return; }
+  if(el.id === 'hd'){ hd = el.checked; localStorage.setItem('maj_hd', hd ? '1' : '0'); drawList(); return; }
   if(!ADM) return;
   if(el.dataset.f){
     const f = el.dataset.f, x = D.q.find(z => String(z.id) === el.dataset.id), p = {};
     p[f] = el.checked ? jour() : null;
-    if(f === 'fkt_amorti' && el.checked && x && !x.fkt_edit) p.fkt_edit = jour();
-    if(f === 'fkt_edit' && !el.checked) p.fkt_amorti = null;
     patch(el.dataset.id, p);
   } else if(el.dataset.d){ if(el.value) patch(el.dataset.id, {[el.dataset.d]:el.value}); }
   else if(el.dataset.n && el.value.trim()) patch(el.dataset.n, {numero:el.value.trim()});

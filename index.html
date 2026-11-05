@@ -56,7 +56,9 @@ const H = {apikey:K, 'Content-Type':'application/json', Prefer:'return=represent
 const EXC = ['TEST_BOB'];
 const LB = {FKT:['FKT reçue · à analyser', 'FKT analysée · amortie'], FA:['Éditée', 'Amortie'], PA:['Éditée', 'Levée']};
 const jour = () => { const d = new Date(); if(d.getHours() < 6) d.setDate(d.getDate() - 1); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
-let ADM = null, D = {sx:[], bl:[], q:[], names:{}}, cur = localStorage.getItem('maj_ch') || '', cat = 'FKT', flt = '';
+let ADM = null, D = {sx:[], bl:[], q:[], names:{}}, cur = localStorage.getItem('maj_ch') || '', cat = 'FKT', flt = '', ft = '';
+const FKT_ORD = ['FKT_AT', 'FKT_ARMEMENT', 'FKT_FBM', 'FKT_DEROULAGE'];
+const ftLabel = t => String(t).replace(/^FKT_/, '').replace(/_/g, ' ');
 
 async function all(t, c){
   let out = [], from = 0;
@@ -107,7 +109,7 @@ async function load(){
 }
 
 const rows = (c, ck) => D.q.filter(x => (x.categorie || 'FKT') === c && key(x.chantier) === ck)
-  .sort((a, b) => c === 'FKT' ? String(b.support).localeCompare(String(a.support), 'fr', {numeric:true}) : String(a.numero || a.support || '').localeCompare(String(b.numero || b.support || ''), 'fr', {numeric:true}));
+  .sort((a, b) => c === 'FKT' ? String(a.support).localeCompare(String(b.support), 'fr', {numeric:true}) || FKT_ORD.indexOf(a.fkt_type) - FKT_ORD.indexOf(b.fkt_type) : String(a.numero || a.support || '').localeCompare(String(b.numero || b.support || ''), 'fr', {numeric:true}));
 
 /* PA obligatoires : une par fouille, une par FKT appareil tendeur */
 /* PA obligatoires : une par fouille, une par FKT appareil tendeur */
@@ -142,15 +144,21 @@ function draw(){
   if(!ks.includes(cur)) cur = ks[0] || '';
   $('#v').innerHTML = `<select id="ch">${ks.map(k => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(D.names[k])}</option>`).join('')}</select>
     <div class="seg">${['FKT', 'PA', 'FA'].map(c => `<button type="button" data-c="${c}" aria-pressed="${c === cat}">${c}</button>`).join('')}</div>
+    <div id="sub"></div>
     <input type="search" id="q" placeholder="Filtrer (support, N°, libellé)" value="${esc(flt)}" style="margin-bottom:10px">
     <div id="sum"></div><div id="lst"></div>
     ${cat === 'FKT' ? '' : `<div class="card"><h2>Créer une ${cat}</h2><div class="frm"><input type="text" id="fn" placeholder="N° (ex. 12)"><input type="text" id="fs" placeholder="Support (facultatif)"><input type="text" id="fl" placeholder="Libellé (facultatif)"><button type="button" class="btn" data-add>➕ Créer la ${cat}</button></div></div>`}`;
   drawList();
 }
 function drawList(){
-  const L = rows(cat, cur), n = L.length, e = L.filter(x => x.fkt_edit).length, c = L.filter(x => x.fkt_amorti).length, lb = LB[cat], R = cat === 'PA' ? req(cur) : [];
+  const A = rows(cat, cur), lb = LB[cat], R = cat === 'PA' ? req(cur) : [];
+  const types = cat === 'FKT' ? [...new Set(A.map(x => x.fkt_type).filter(Boolean))].sort((a, b) => (FKT_ORD.indexOf(a) + 1 || 99) - (FKT_ORD.indexOf(b) + 1 || 99)) : [];
+  if(!types.includes(ft)) ft = '';
+  const L = cat === 'FKT' && ft ? A.filter(x => x.fkt_type === ft) : A;
+  const n = L.length, e = L.filter(x => x.fkt_edit).length, c = L.filter(x => x.fkt_amorti).length;
+  $('#sub').innerHTML = types.length ? `<div class="seg" style="flex-wrap:wrap"><button type="button" style="flex:1 1 auto" data-ft="" aria-pressed="${ft === ''}">Tous</button>${types.map(t => `<button type="button" style="flex:1 1 auto" data-ft="${esc(t)}" aria-pressed="${ft === t}">${esc(ftLabel(t))}</button>`).join('')}</div>` : '';
   const q = nz(flt), S = L.filter(x => !q || nz([x.support, x.numero, x.libelle, x.fkt_type].join(' ')).includes(q));
-  $('#sum').innerHTML = `<div class="card"><div class="rl"><b>${cat} · ${esc(D.names[cur] || '')}</b><b>${c} / ${n} · ${n ? Math.round(c / n * 100) : 0} %</b></div>
+  $('#sum').innerHTML = `<div class="card"><div class="rl"><b>${cat}${ft ? ' ' + esc(ftLabel(ft)) : ''} · ${esc(D.names[cur] || '')}</b><b>${c} / ${n} · ${n ? Math.round(c / n * 100) : 0} %</b></div>
     <div class="bar"><i style="width:${n ? c / n * 100 : 0}%;background:var(--ok)"></i><i style="width:${n ? (e - c) / n * 100 : 0}%;background:var(--ec)"></i></div>
     <div class="mu"><span style="color:var(--ok)">■</span> ${lb[1]} (${c}) · <span style="color:var(--ec)">■</span> ${lb[0]} (${e - c}) · à faire (${n - e})</div>
     ${R.length ? `<button type="button" class="btn" data-gen style="margin-top:10px">⚠️ Créer les ${R.length} PA obligatoires manquantes</button><div class="mu">Fouilles et FKT appareil tendeur sans PA.</div>` : ''}</div>`;
@@ -190,7 +198,7 @@ $('#v').addEventListener('change', e => {
 $('#v').addEventListener('input', e => { if(e.target.id === 'q'){ flt = e.target.value; drawList(); } });
 $('#v').addEventListener('click', async e => {
   const t = e.target.closest('button'); if(!t || !ADM) return;
-  if(t.dataset.c){ cat = t.dataset.c; draw(); return; }
+  if(t.dataset.ft !== undefined){ ft = t.dataset.ft; drawList(); return; }
   try{
     if('gen' in t.dataset){ await post(req(cur).map(o => ({chantier:D.names[cur], categorie:'PA', numero:null, ...o}))); }
     else if('add' in t.dataset){

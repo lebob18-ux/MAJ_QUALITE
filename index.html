@@ -110,14 +110,18 @@ const rows = (c, ck) => D.q.filter(x => (x.categorie || 'FKT') === c && key(x.ch
   .sort((a, b) => c === 'FKT' ? String(b.support).localeCompare(String(a.support), 'fr', {numeric:true}) : String(a.numero || a.support || '').localeCompare(String(b.numero || b.support || ''), 'fr', {numeric:true}));
 
 /* PA obligatoires : une par fouille, une par FKT appareil tendeur */
+/* PA obligatoires : une par fouille, une par FKT appareil tendeur */
 function req(ck){
   const o = [];
   D.bl.filter(b => key(b.chantier) === ck).forEach(b => o.push({origine:'FOUILLE', support:b.support, libelle:null}));
   D.sx.filter(r => key(r.Chantier) === ck).forEach(r => {
     const t = nz(r.Tache), ty = key(r.type);
-    if(ty === 'GC' && t.includes('fouille')) o.push({origine:'FOUILLE', support:r.Support, libelle:null});
-      });
-  D.q.filter(x => (x.categorie || 'FKT') === 'FKT' && key(x.chantier) === ck && key(x.fkt_type) === 'FKT_AT').forEach(x => o.push({origine:'FKT_AT', support:x.support, libelle:'PA FKT_AT'})); o.push({origine:'FKT_AT', support:r.Support, libelle:'PA ' + r.Tache});
+    if(ty === 'GC' && t.includes('fouille')) {
+      o.push({origine:'FOUILLE', support:r.Support, libelle:null});
+    }
+  });
+  D.q.filter(x => (x.categorie || 'FKT') === 'FKT' && key(x.chantier) === ck && key(x.fkt_type) === 'FKT_AT').forEach(x => {
+    o.push({origine:'FKT_AT', support:x.support, libelle:'PA FKT_AT'});
   });
   const ex = rows('PA', ck).filter(x => x.origine);
   return o.filter((x, i) => o.findIndex(y => y.origine === x.origine && key(y.support) === key(x.support) && y.libelle === x.libelle) === i)

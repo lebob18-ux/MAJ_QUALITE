@@ -133,7 +133,7 @@ function req(ck){
 
 function row(x){
   const c = x.categorie || 'FKT', l = LB[c];
-  const ln = (f, t) => `<div class="ln"><label class="tg"><input type="checkbox" data-f="${f}" data-id="${x.id}"${x[f] ? ' checked' : ''}> ${t}</label><input type="date" data-d="${f}" data-id="${x.id}" value="${esc(x[f] || '')}"${x[f] ? '' : ' disabled'}></div>`;
+  const ln = (f, t) => `<label class="tg" style="margin-top:6px"><input type="checkbox" data-f="${f}" data-id="${x.id}"${x[f] ? ' checked' : ''}> ${t}</label>`;
   const titre = c === 'FKT' ? `Support ${esc(x.support)}` : (x.numero ? esc(x.numero) : `<input type="text" data-n="${x.id}" placeholder="N° ${c}" style="width:110px;min-height:36px">`) + (x.support ? ' · Support ' + esc(x.support) : '');
   const sub = c === 'FKT' ? esc(x.fkt_type) : (x.origine === 'FOUILLE' ? '<span class="tag">Fouille</span>' : x.origine === 'FKT_AT' ? '<span class="tag">FKT appareil tendeur</span>' : '') + (x.origine === 'FOUILLE' ? '' : esc(x.libelle || ''));
   return `<div class="card"><div class="rl"><b>${titre}</b>${c === 'FKT' ? '' : `<button type="button" class="del" data-del="${x.id}">🗑</button>`}</div>${sub ? `<div class="mu">${sub}</div>` : ''}${ln('fkt_edit', l[0])}${ln('fkt_amorti', l[1])}</div>`;

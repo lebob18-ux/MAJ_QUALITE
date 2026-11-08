@@ -55,7 +55,7 @@ const key = s => String(s || '').trim().toUpperCase();
 const nz = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const H = {apikey:K, 'Content-Type':'application/json', Prefer:'return=representation'};
 const EXC = ['TEST_BOB'];
-const LB = {FKT:['FKT reçue · à analyser', 'FKT analysée · amortie'], FA:['Éditée', 'Amortie'], PA:['Éditée', 'Levée']};
+const LB = {FKT:['FKT reçue · à analyser', 'FKT analysée · amortie', 'Refuser'], FA:['Éditée', 'Amortie', 'Refuser'], PA:['Éditée', 'Levée', 'Refuser']};
 const jour = () => { const d = new Date(); if(d.getHours() < 6) d.setDate(d.getDate() - 1); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
 let ADM = null, D = {sx:[], bl:[], q:[], names:{}}, cur = localStorage.getItem('maj_ch') || '', cat = 'FKT', flt = '', ft = '';
 const FKT_ORD = ['FKT_AT', 'FKT_ARMEMENT', 'FKT_FBM', 'FKT_DEROULAGE'];
@@ -94,11 +94,12 @@ async function load(){
   if(!ADM){ draw(); return; }
   $('#st').textContent = 'Chargement…';
   try{
-    const [sx, bl, q] = await Promise.all([
-      all('suivi_sutx_v2', 'id,Chantier,Support,Tache,type'),
-      all('blindage', 'id,chantier,support'),
-      all('qualite_pcle', 'id,chantier,support,fkt_type,fkt_edit,fkt_amorti,categorie,numero,libelle,origine')
-    ]);
+const [sx, bl, q] = await Promise.all([
+  all('suivi_sutx_v2', 'id,Chantier,Support,Tache,type'),
+  all('blindage', 'id,chantier,support'),
+  // Ajout de fkt_refus ici :
+  all('qualite_pcle', 'id,chantier,support,fkt_type,fkt_edit,fkt_amorti,fkt_refus,categorie,numero,libelle,origine')
+]);
     D = {sx, bl, q, names:{}};
     const nm = n => { const k = key(n); if(k && !EXC.includes(k) && !D.names[k]) D.names[k] = String(n).trim(); };
     sx.forEach(r => nm(r.Chantier)); bl.forEach(r => nm(r.chantier)); q.forEach(r => nm(r.chantier));
@@ -134,10 +135,19 @@ function req(ck){
 
 function row(x){
   const c = x.categorie || 'FKT', l = LB[c], inc = !!x.fkt_amorti && !x.fkt_edit;
+  const fields = ['fkt_edit', 'fkt_amorti', 'fkt_refus'];
   const ln = (f, t) => `<label class="tg" style="margin-top:6px"><input type="checkbox" data-f="${f}" data-id="${x.id}"${x[f] ? ' checked' : ''}> ${t}</label>`;
   const titre = c === 'FKT' ? `Support ${esc(x.support)}` : (x.numero ? esc(x.numero) : `<input type="text" data-n="${x.id}" placeholder="N° ${c}" style="width:110px;min-height:36px">`) + (x.support ? ' · Support ' + esc(x.support) : '');
   const sub = c === 'FKT' ? esc(x.fkt_type) : (x.origine === 'FOUILLE' ? '<span class="tag">Fouille</span>' : x.origine === 'FKT_AT' ? '<span class="tag">FKT appareil tendeur</span>' : '') + (x.origine === 'FOUILLE' ? '' : esc(x.libelle || ''));
-  return `<div class="card"${inc ? ' style="border-color:var(--dep);background:rgba(196,84,59,.12)"' : ''}><div class="rl"><b>${titre}</b>${c === 'FKT' ? '' : `<button type="button" class="del" data-del="${x.id}">🗑</button>`}</div>${sub ? `<div class="mu">${sub}</div>` : ''}${ln('fkt_edit', l[0])}${ln('fkt_amorti', l[1])}${inc ? `<div style="margin-top:6px;font-weight:700;color:var(--dep)">⚠️ « ${l[1]} » cochée sans « ${l[0]} »</div>` : ''}</div>`;
+  
+  return `<div class="card"${inc ? ' style="border-color:var(--dep);background:rgba(196,84,59,.12)"' : ''}>
+    <div class="rl"><b>${titre}</b>${c === 'FKT' ? '' : `<button type="button" class="del" data-del="${x.id}">🗑</button>`}</div>
+    ${sub ? `<div class="mu">${sub}</div>` : ''}
+    ${ln(fields[0], l[0])}
+    ${ln(fields[1], l[1])}
+    ${ln(fields[2], l[2])}
+    ${inc ? `<div style="margin-top:6px;font-weight:700;color:var(--dep)">⚠️ « ${l[1]} » cochée sans « ${l[0]} »</div>` : ''}
+  </div>`;
 }
 
 function draw(){
